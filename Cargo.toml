@@ -1,0 +1,10 @@
+[package]
+name = "parze"
+version = "0.1.0"
+authors = ["Joshua Barretto <joshua.s.barretto@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+smallbox = { version = "0.8", features = ["coerce"] }
