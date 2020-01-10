@@ -51,7 +51,7 @@ impl<P, E> Parser<P, E> {
         }
     }
 
-    fn parse_inner<I>(&self, inputs: I) -> Result<(P::Output, Fail<E>), Fail<E>>
+    fn parse_inner<I>(&self, inputs: I) -> ParseResult<P::Output, E>
         where
             P: Pattern<E>,
             I: IntoIterator<Item=P::Input>,

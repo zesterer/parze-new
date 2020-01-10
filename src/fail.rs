@@ -30,6 +30,15 @@ impl<E> Fail<E> {
         }
     }
 
+    pub fn at(mut self, new_idx: Index) -> Self {
+        match &mut self {
+            Fail::None => {},
+            Fail::One(idx, _) => *idx = new_idx,
+            Fail::Group(idx, _) => *idx = new_idx,
+        }
+        self
+    }
+
     fn furthest_idx(&self) -> Index {
         match self {
             Fail::None => 0,

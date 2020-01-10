@@ -175,7 +175,10 @@ pub fn nested_parse<P, I, Ins, J, E>(f: impl Fn(I) -> Option<(Parser<P, E>, Ins)
             attempt(stream, |stream| {
                 match stream.next() {
                     Some((idx, sym)) => match self.0(sym.clone()) {
-                        Some((parser, ins)) => parser.parse_inner(ins.into_iter()),
+                        Some((parser, ins)) => match parser.parse_inner(ins.into_iter()) {
+                            Ok((out, _)) => Ok((out, Fail::none())),
+                            Err(err) => Err(err.at(idx)),
+                        },
                         None => Err(Fail::one(idx, E::unexpected_sym(sym, idx))),
                     },
                     None => Err(Fail::one(!0, E::unexpected_end())),
