@@ -12,12 +12,16 @@ use crate::{
 // Any
 
 pub fn any<I, E>() -> Parser<impl Pattern<E, Input=I, Output=I>, E>
-    where E: Error<I>
+    where
+        I: Clone,
+        E: Error<I>,
 {
     struct Any<I, E>(PhantomData<(I, E)>);
 
     impl<I, E> Pattern<E> for Any<I, E>
-        where E: Error<I>
+        where
+            I: Into<E::Thing> + Clone,
+            E: Error<I>,
     {
         type Input = I;
         type Output = I;
@@ -25,7 +29,7 @@ pub fn any<I, E>() -> Parser<impl Pattern<E, Input=I, Output=I>, E>
         fn parse(&self, stream: &mut Stream<Self::Input>) -> ParseResult<Self::Output, E> {
             attempt(stream, |stream| {
                 match stream.next() {
-                    Some((_, sym)) => Ok((sym, Fail::none())),
+                    Some((_, sym)) => Ok((sym.clone(), Fail::none())),
                     None => Err(Fail::one(!0, E::unexpected_end())),
                 }
             })
@@ -42,20 +46,25 @@ pub fn any<I, E>() -> Parser<impl Pattern<E, Input=I, Output=I>, E>
 // End
 
 pub fn end<I, E>() -> Parser<impl Pattern<E, Input=I, Output=()>, E>
-    where E: Error<I>
+    where
+        I: Clone,
+        E: Error<I>
 {
     struct End<I, E>(PhantomData<(I, E)>);
 
     impl<I, E> Pattern<E> for End<I, E>
-        where E: Error<I>
+        where
+            I: Into<E::Thing> + Clone,
+            E: Error<I>,
     {
         type Input = I;
         type Output = ();
 
         fn parse(&self, stream: &mut Stream<Self::Input>) -> ParseResult<Self::Output, E> {
+            let checkpoint = stream.checkpoint();
             attempt(stream, |stream| {
                 match stream.next() {
-                    Some((idx, sym)) => Err(Fail::one(idx, E::expected_end(sym, idx))),
+                    Some((idx, sym)) => Err(Fail::one(idx, E::expected_end(sym, stream.region_from(checkpoint)))),
                     None => Ok(((), Fail::none())),
                 }
             })
@@ -74,7 +83,7 @@ pub fn end<I, E>() -> Parser<impl Pattern<E, Input=I, Output=()>, E>
 pub fn just<I, J, E>(item: J) -> Parser<impl Pattern<E, Input=I, Output=I>, E>
     where
         I: PartialEq<J> + Clone,
-        J: Clone,
+        J: Into<E::Thing> + Clone,
         E: Error<I>,
 {
     struct Just<I, J, E>(J, PhantomData<(I, E)>);
@@ -82,18 +91,19 @@ pub fn just<I, J, E>(item: J) -> Parser<impl Pattern<E, Input=I, Output=I>, E>
     impl<I, J, E> Pattern<E> for Just<I, J, E>
         where
             I: PartialEq<J> + Clone,
-            J: Clone,
+            J: Into<E::Thing> + Clone,
             E: Error<I>,
     {
         type Input = I;
         type Output = I;
 
         fn parse(&self, stream: &mut Stream<Self::Input>) -> ParseResult<Self::Output, E> {
+            let checkpoint = stream.checkpoint();
             attempt(stream, |stream| {
                 match stream.next() {
-                    Some((_, sym)) if sym == self.0 => Ok((sym, Fail::none())),
-                    Some((idx, sym)) => Err(Fail::one(idx, E::unexpected_sym(sym, idx))), // .expected(self.0.clone())
-                    None => Err(Fail::one(!0, E::unexpected_end())), // .expected(self.0.clone())
+                    Some((_, sym)) if sym == &self.0 => Ok((sym.clone(), Fail::none())),
+                    Some((idx, sym)) => Err(Fail::one(idx, E::unexpected_sym(sym, stream.region_from(checkpoint)).expected(self.0.clone().into()))),
+                    None => Err(Fail::one(!0, E::unexpected_end())),
                 }
             })
         }
@@ -111,7 +121,7 @@ pub fn just<I, J, E>(item: J) -> Parser<impl Pattern<E, Input=I, Output=I>, E>
 pub fn seq<I, J, E>(item: impl IntoIterator<Item=J>) -> Parser<impl Pattern<E, Input=I, Output=Vec<I>>, E>
     where
         I: PartialEq<J> + Clone,
-        J: Clone,
+        J: Into<E::Thing> + Clone,
         E: Error<I>,
 {
     struct Seq<I, J, E>(Vec<J>, PhantomData<(I, E)>);
@@ -119,19 +129,20 @@ pub fn seq<I, J, E>(item: impl IntoIterator<Item=J>) -> Parser<impl Pattern<E, I
     impl<I, J, E> Pattern<E> for Seq<I, J, E>
         where
             I: PartialEq<J> + Clone,
-            J: Clone,
+            J: Into<E::Thing> + Clone,
             E: Error<I>,
     {
         type Input = I;
         type Output = Vec<I>;
 
         fn parse(&self, stream: &mut Stream<Self::Input>) -> ParseResult<Self::Output, E> {
+            let checkpoint = stream.checkpoint();
             attempt(stream, |stream| {
                 let mut syms = Vec::new();
                 for item in self.0.iter() {
                     match stream.next() {
-                        Some((_, sym)) if &sym == item => syms.push(sym),
-                        Some((idx, sym)) => return Err(Fail::one(idx, E::unexpected_sym(sym, idx))),
+                        Some((_, sym)) if sym == item => syms.push(sym.clone()),
+                        Some((idx, sym)) => return Err(Fail::one(idx, E::unexpected_sym(sym, stream.region_from(checkpoint)).expected(item.clone().into()))),
                         None => return Err(Fail::one(!0, E::unexpected_end())),
                     }
                 }
@@ -172,14 +183,15 @@ pub fn nested_parse<P, I, Ins, J, E>(f: impl Fn(I) -> Option<(Parser<P, E>, Ins)
         type Output = J;
 
         fn parse(&self, stream: &mut Stream<Self::Input>) -> ParseResult<Self::Output, E> {
+            let checkpoint = stream.checkpoint();
             attempt(stream, |stream| {
                 match stream.next() {
                     Some((idx, sym)) => match self.0(sym.clone()) {
-                        Some((parser, ins)) => match parser.parse_inner(ins.into_iter()) {
+                        Some((parser, ins)) => match parser.parse_inner(&ins.into_iter().collect::<Vec<_>>()) {
                             Ok((out, _)) => Ok((out, Fail::none())),
-                            Err(err) => Err(err.at(idx)),
+                            Err(err) => Err(err.add_index(idx)), // This is a total hack
                         },
-                        None => Err(Fail::one(idx, E::unexpected_sym(sym, idx))),
+                        None => Err(Fail::one(idx, E::unexpected_sym(sym, stream.region_from(checkpoint)))),
                     },
                     None => Err(Fail::one(!0, E::unexpected_end())),
                 }
@@ -213,11 +225,12 @@ pub fn permit_map<I, J, E>(f: impl Fn(I) -> Option<J> + Clone) -> Parser<impl Pa
         type Output = J;
 
         fn parse(&self, stream: &mut Stream<Self::Input>) -> ParseResult<Self::Output, E> {
+            let checkpoint = stream.checkpoint();
             attempt(stream, |stream| {
                 match stream.next() {
                     Some((idx, sym)) => match self.0(sym.clone()) {
                         Some(out) => Ok((out, Fail::none())),
-                        None => Err(Fail::one(idx, E::unexpected_sym(sym, idx))),
+                        None => Err(Fail::one(idx, E::unexpected_sym(sym, stream.region_from(checkpoint)))),
                     },
                     None => Err(Fail::one(!0, E::unexpected_end())),
                 }

@@ -42,7 +42,7 @@ impl<P, E> Parser<P, E> {
         Parser::from_pat(Map(self.pat, f, PhantomData))
     }
 
-    pub fn map_with_range<U>(self, f: impl Fn(P::Output, Range<Index>) -> U + Clone) -> Parser<impl Pattern<E, Input=P::Input, Output=U>, E>
+    pub fn map_with_region<U>(self, f: impl Fn(P::Output, E::Region) -> U + Clone) -> Parser<impl Pattern<E, Input=P::Input, Output=U>, E>
         where
             P: Pattern<E>,
             E: Error<P::Input>,
@@ -53,16 +53,15 @@ impl<P, E> Parser<P, E> {
             where
                 E: Error<I>,
                 A: Pattern<E, Input=I, Output=X>,
-                F: Fn(X, Range<Index>) -> U + Clone,
+                F: Fn(X, E::Region) -> U + Clone,
         {
             type Input = I;
             type Output = U;
 
             fn parse(&self, stream: &mut Stream<Self::Input>) -> ParseResult<Self::Output, E> {
-                let start = stream.index();
+                let checkpoint = stream.checkpoint();
                 let (out, fail) = self.0.parse(stream)?;
-                let end = stream.index();
-                Ok(((self.1)(out, Range { start, end }), fail))
+                Ok(((self.1)(out, stream.region_from(checkpoint)), fail))
             }
 
             fn cloned(&self) -> Self where Self: Sized {

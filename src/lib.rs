@@ -2,6 +2,7 @@
 
 pub mod error;
 pub mod stream;
+pub mod region;
 pub mod primitives;
 pub mod ops;
 pub mod declare;
@@ -51,14 +52,12 @@ impl<P, E> Parser<P, E> {
         }
     }
 
-    fn parse_inner<I>(&self, inputs: I) -> ParseResult<P::Output, E>
+    fn parse_inner(&self, inputs: &[P::Input]) -> ParseResult<P::Output, E>
         where
             P: Pattern<E>,
-            I: IntoIterator<Item=P::Input>,
-            I::IntoIter: Clone,
             E: Error<P::Input>,
     {
-        self.pat.parse(&mut Stream::from_iter(inputs))
+        self.pat.parse(&mut Stream::from(inputs))
     }
 
     pub fn parse<I>(&self, inputs: I) -> Result<P::Output, Vec<E>>
@@ -68,7 +67,8 @@ impl<P, E> Parser<P, E> {
             I::IntoIter: Clone,
             E: Error<P::Input>,
     {
-        match self.parse_inner(inputs) {
+        let inputs = inputs.into_iter().collect::<Vec<_>>();
+        match self.parse_inner(&inputs) {
             Ok((out, _)) => Ok(out),
             Err(fail) => Err(fail.collect()),
         }

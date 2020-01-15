@@ -1,18 +1,24 @@
 use std::{
-    marker::PhantomData,
     fmt,
+    ops::Range,
+    marker::PhantomData,
     hash::Hash,
     collections::HashSet,
 };
-use crate::Index;
+use crate::{
+    Index,
+    region::Region,
+};
 
 pub trait Error<S>: Sized {
+    type Region: Region<S>;
+    type Thing: From<S>;
     type Context;
 
-    fn unexpected_sym(sym: S, at: Index) -> Self;
+    fn unexpected_sym(sym: &S, at: Self::Region) -> Self;
     fn unexpected_end() -> Self;
-    fn expected_end(sym: S, at: Index) -> Self;
-    fn expected(self, _sym: S) -> Self { self }
+    fn expected_end(sym: &S, at: Self::Region) -> Self;
+    fn expected(self, _sym: Self::Thing) -> Self { self }
     fn merge(self, _other: Self) -> Self { self }
     fn context(self, _ctx: Self::Context) -> Self { self }
 }
@@ -26,8 +32,10 @@ pub struct EmptyError<S>(PhantomData<S>);
 
 impl<S> Error<S> for EmptyError<S> {
     type Context = ();
+    type Thing = S;
+    type Region = Option<Range<usize>>;
 
-    fn unexpected_sym(_sym: S, _at: Index) -> Self {
+    fn unexpected_sym(_sym: &S, _at: Self::Region) -> Self {
         Self(PhantomData)
     }
 
@@ -35,11 +43,11 @@ impl<S> Error<S> for EmptyError<S> {
         Self(PhantomData)
     }
 
-    fn expected_end(_sym: S, _at: Index) -> Self {
+    fn expected_end(_sym: &S, _at: Self::Region) -> Self {
         Self(PhantomData)
     }
 
-    fn expected(self, _sym: S) -> Self {
+    fn expected(self, _sym: Self::Thing) -> Self {
         Self(PhantomData)
     }
 
@@ -65,16 +73,18 @@ impl<S> fmt::Debug for EmptyError<S> {
 #[derive(Clone)]
 pub struct SimpleError<S> {
     found: Option<S>,
-    at: Option<Index>,
+    at: Option<Option<Range<usize>>>,
     expected: Option<HashSet<S>>,
 }
 
-impl<S: Hash + Eq> Error<S> for SimpleError<S> {
+impl<S: Hash + Eq + Clone> Error<S> for SimpleError<S> {
     type Context = ();
+    type Thing = S;
+    type Region = Option<Range<usize>>;
 
-    fn unexpected_sym(sym: S, at: Index) -> Self {
+    fn unexpected_sym(sym: &S, at: Self::Region) -> Self {
         Self {
-            found: Some(sym),
+            found: Some(sym.clone()),
             at: Some(at),
             expected: Some(HashSet::default()),
         }
@@ -88,15 +98,15 @@ impl<S: Hash + Eq> Error<S> for SimpleError<S> {
         }
     }
 
-    fn expected_end(sym: S, at: Index) -> Self {
+    fn expected_end(sym: &S, at: Self::Region) -> Self {
         Self {
-            found: Some(sym),
+            found: Some(sym.clone()),
             at: Some(at),
             expected: None,
         }
     }
 
-    fn expected(mut self, sym: S) -> Self {
+    fn expected(mut self, sym: Self::Thing) -> Self {
         self.expected.as_mut().map(|e| e.insert(sym));
         self
     }

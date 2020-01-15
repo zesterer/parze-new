@@ -24,13 +24,13 @@ fn a() {
 
     // Just
 
-    let p = just::<_, DefaultError<_>>('!');
+    let p = just::<_, _, DefaultError<_>>('!');
 
     assert!(p.parse(vec!['?']).is_err());
 
     // Then
 
-    let p = just::<_, DefaultError<_>>('!').then(just('?'));
+    let p = just::<_, _, DefaultError<_>>('!').then(just('?'));
 
     assert_eq!(p.parse(vec!['!', '?']), Ok(('!', '?')));
     assert!(p.parse(vec!['!', '!']).is_err());
@@ -38,7 +38,7 @@ fn a() {
 
     // Or
 
-    let p = just::<_, DefaultError<_>>('!').or(just('?'));
+    let p = just::<_, _, DefaultError<_>>('!').or(just('?'));
 
     assert_eq!(p.parse(vec!['!']), Ok('!'));
     assert_eq!(p.parse(vec!['?']), Ok('?'));
@@ -46,7 +46,7 @@ fn a() {
 
     // Repeated
 
-    let p = just::<_, DefaultError<_>>('!').repeated();
+    let p = just::<_, _, DefaultError<_>>('!').repeated();
 
     assert_eq!(p.parse(vec!['!', '!', '!']), Ok(vec!['!', '!', '!']));
     assert_eq!(p.parse(vec!['!', '!', '?']), Ok(vec!['!', '!']));
@@ -55,7 +55,7 @@ fn a() {
 
     // OnceOrMore
 
-    let p = just::<_, DefaultError<_>>('!').once_or_more();
+    let p = just::<_, _, DefaultError<_>>('!').once_or_more();
 
     assert_eq!(p.parse(vec!['!', '!', '!']), Ok(vec!['!', '!', '!']));
     assert_eq!(p.parse(vec!['!', '!', '?']), Ok(vec!['!', '!']));
@@ -65,7 +65,7 @@ fn a() {
 
     // OrNot
 
-    let p = just::<_, DefaultError<_>>('!').or_not();
+    let p = just::<_, _, DefaultError<_>>('!').or_not();
 
     assert_eq!(p.parse(vec!['!']), Ok(Some('!')));
     assert_eq!(p.parse(vec!['?']), Ok(None));
@@ -86,7 +86,7 @@ fn bf() {
     }
 
     let bf = recursive(|bf| {
-            just::<_, DefaultError<_>>('+').to(Instr::Add)
+            just::<_, _, DefaultError<_>>('+').to(Instr::Add)
         .or(just('-').to(Instr::Sub))
         .or(just('<').to(Instr::Left))
         .or(just('>').to(Instr::Right))

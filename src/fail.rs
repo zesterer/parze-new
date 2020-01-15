@@ -30,11 +30,11 @@ impl<E> Fail<E> {
         }
     }
 
-    pub fn at(mut self, new_idx: Index) -> Self {
+    pub fn add_index(mut self, offset: Index) -> Self {
         match &mut self {
             Fail::None => {},
-            Fail::One(idx, _) => *idx = new_idx,
-            Fail::Group(idx, _) => *idx = new_idx,
+            Fail::One(idx, _) => *idx += offset,
+            Fail::Group(idx, _) => *idx += offset,
         }
         self
     }
