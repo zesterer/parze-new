@@ -33,8 +33,8 @@ impl<E> Fail<E> {
     pub fn add_index(mut self, offset: Index) -> Self {
         match &mut self {
             Fail::None => {},
-            Fail::One(idx, _) => *idx += offset,
-            Fail::Group(idx, _) => *idx += offset,
+            Fail::One(idx, _) => *idx = idx.saturating_add(offset),
+            Fail::Group(idx, _) => *idx = idx.saturating_add(offset),
         }
         self
     }
