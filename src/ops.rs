@@ -296,8 +296,7 @@ impl<P, E> Parser<P, E> {
                 for i in 0.. {
                     match self.0.parse(stream) {
                         Ok((out, _)) => outputs.push(out),
-                        Err(fail) if i == 0 => return Ok((outputs, fail)),
-                        Err(fail) => return Err(fail),
+                        Err(fail) => return Ok((outputs, fail)),
                     }
 
                     if let Err(fail) = self.1.parse(stream) {
