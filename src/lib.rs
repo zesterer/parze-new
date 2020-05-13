@@ -2,7 +2,7 @@
 
 pub mod error;
 pub mod stream;
-pub mod region;
+pub mod span;
 pub mod primitives;
 pub mod ops;
 pub mod declare;

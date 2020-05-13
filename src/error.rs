@@ -7,17 +7,17 @@ use std::{
 };
 use crate::{
     Index,
-    region::Region,
+    span::Span,
 };
 
 pub trait Error<S>: Sized {
-    type Region: Region<S>;
+    type Span: Span<S>;
     type Thing: From<S>;
     type Context;
 
-    fn unexpected_sym(sym: &S, at: Self::Region) -> Self;
+    fn unexpected_sym(sym: &S, at: Self::Span) -> Self;
     fn unexpected_end() -> Self;
-    fn expected_end(sym: &S, at: Self::Region) -> Self;
+    fn expected_end(sym: &S, at: Self::Span) -> Self;
     fn expected(self, _sym: Self::Thing) -> Self { self }
     fn merge(self, _other: Self) -> Self { self }
     fn context(self, _ctx: Self::Context) -> Self { self }
@@ -33,9 +33,9 @@ pub struct EmptyError<S>(PhantomData<S>);
 impl<S> Error<S> for EmptyError<S> {
     type Context = ();
     type Thing = S;
-    type Region = Option<Range<usize>>;
+    type Span = Option<Range<usize>>;
 
-    fn unexpected_sym(_sym: &S, _at: Self::Region) -> Self {
+    fn unexpected_sym(_sym: &S, _at: Self::Span) -> Self {
         Self(PhantomData)
     }
 
@@ -43,7 +43,7 @@ impl<S> Error<S> for EmptyError<S> {
         Self(PhantomData)
     }
 
-    fn expected_end(_sym: &S, _at: Self::Region) -> Self {
+    fn expected_end(_sym: &S, _at: Self::Span) -> Self {
         Self(PhantomData)
     }
 
@@ -80,9 +80,9 @@ pub struct SimpleError<S> {
 impl<S: Hash + Eq + Clone> Error<S> for SimpleError<S> {
     type Context = ();
     type Thing = S;
-    type Region = Option<Range<usize>>;
+    type Span = Option<Range<usize>>;
 
-    fn unexpected_sym(sym: &S, at: Self::Region) -> Self {
+    fn unexpected_sym(sym: &S, at: Self::Span) -> Self {
         Self {
             found: Some(sym.clone()),
             at: Some(at),
@@ -98,7 +98,7 @@ impl<S: Hash + Eq + Clone> Error<S> for SimpleError<S> {
         }
     }
 
-    fn expected_end(sym: &S, at: Self::Region) -> Self {
+    fn expected_end(sym: &S, at: Self::Span) -> Self {
         Self {
             found: Some(sym.clone()),
             at: Some(at),

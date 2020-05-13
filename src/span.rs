@@ -1,12 +1,12 @@
 use std::ops::Range;
 
-pub trait Region<T> {
+pub trait Span<T> {
     fn none() -> Self;
     fn single(index: usize, sym: &T) -> Self;
     fn group(syms: &[T], range: Range<usize>) -> Self;
 }
 
-impl<T> Region<T> for Option<Range<usize>> {
+impl<T> Span<T> for Option<Range<usize>> {
     fn none() -> Self {
         None
     }

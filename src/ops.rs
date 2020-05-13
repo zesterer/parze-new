@@ -42,7 +42,7 @@ impl<P, E> Parser<P, E> {
         Parser::from_pat(Map(self.pat, f, PhantomData))
     }
 
-    pub fn map_with_region<U>(self, f: impl Fn(P::Output, E::Region) -> U + Clone) -> Parser<impl Pattern<E, Input=P::Input, Output=U>, E>
+    pub fn map_with_region<U>(self, f: impl Fn(P::Output, E::Span) -> U + Clone) -> Parser<impl Pattern<E, Input=P::Input, Output=U>, E>
         where
             P: Pattern<E>,
             E: Error<P::Input>,
@@ -53,7 +53,7 @@ impl<P, E> Parser<P, E> {
             where
                 E: Error<I>,
                 A: Pattern<E, Input=I, Output=X>,
-                F: Fn(X, E::Region) -> U + Clone,
+                F: Fn(X, E::Span) -> U + Clone,
         {
             type Input = I;
             type Output = U;
