@@ -5,10 +5,7 @@ use std::{
     hash::Hash,
     collections::HashSet,
 };
-use crate::{
-    Index,
-    span::Span,
-};
+use crate::span::Span;
 
 pub trait Error<S>: Sized {
     type Span: Span<S>;

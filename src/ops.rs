@@ -1,7 +1,4 @@
-use std::{
-    ops::Range,
-    marker::PhantomData,
-};
+use std::marker::PhantomData;
 use crate::{
     util::attempt,
     Parser,
@@ -9,7 +6,6 @@ use crate::{
     Error,
     Stream,
     ParseResult,
-    Index,
 };
 
 impl<P, E> Parser<P, E> {
@@ -42,7 +38,7 @@ impl<P, E> Parser<P, E> {
         Parser::from_pat(Map(self.pat, f, PhantomData))
     }
 
-    pub fn map_with_region<U>(self, f: impl Fn(P::Output, E::Span) -> U + Clone) -> Parser<impl Pattern<E, Input=P::Input, Output=U>, E>
+    pub fn map_with_span<U>(self, f: impl Fn(P::Output, E::Span) -> U + Clone) -> Parser<impl Pattern<E, Input=P::Input, Output=U>, E>
         where
             P: Pattern<E>,
             E: Error<P::Input>,
@@ -61,7 +57,7 @@ impl<P, E> Parser<P, E> {
             fn parse(&self, stream: &mut Stream<Self::Input>) -> ParseResult<Self::Output, E> {
                 let checkpoint = stream.checkpoint();
                 let (out, fail) = self.0.parse(stream)?;
-                Ok(((self.1)(out, stream.region_from(checkpoint)), fail))
+                Ok(((self.1)(out, stream.span_from(checkpoint)), fail))
             }
 
             fn cloned(&self) -> Self where Self: Sized {
@@ -293,7 +289,7 @@ impl<P, E> Parser<P, E> {
             fn parse(&self, stream: &mut Stream<Self::Input>) -> ParseResult<Self::Output, E> {
                 let mut outputs = Vec::new();
 
-                for i in 0.. {
+                for _ in 0.. {
                     match self.0.parse(stream) {
                         Ok((out, _)) => outputs.push(out),
                         Err(fail) => return Ok((outputs, fail)),

@@ -1,4 +1,3 @@
-use smallbox::{SmallBox, space::S4};
 use crate::{
     Index,
     span::Span,
@@ -31,7 +30,7 @@ impl<'a, T> Stream<'a, T> {
         self.index as Index
     }
 
-    pub fn region_from<R: Span<T>>(&self, checkpoint: Index) -> R {
+    pub fn span_from<R: Span<T>>(&self, checkpoint: Index) -> R {
         let checkpoint = checkpoint as usize;
         Span::group(&self.slice[checkpoint..self.index], checkpoint..self.index)
     }

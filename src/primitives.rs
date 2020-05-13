@@ -64,7 +64,7 @@ pub fn end<I, E>() -> Parser<impl Pattern<E, Input=I, Output=()>, E>
             let checkpoint = stream.checkpoint();
             attempt(stream, |stream| {
                 match stream.next() {
-                    Some((idx, sym)) => Err(Fail::one(idx, E::expected_end(sym, stream.region_from(checkpoint)))),
+                    Some((idx, sym)) => Err(Fail::one(idx, E::expected_end(sym, stream.span_from(checkpoint)))),
                     None => Ok(((), Fail::none())),
                 }
             })
@@ -102,7 +102,7 @@ pub fn just<I, J, E>(item: J) -> Parser<impl Pattern<E, Input=I, Output=I>, E>
             attempt(stream, |stream| {
                 match stream.next() {
                     Some((_, sym)) if sym == &self.0 => Ok((sym.clone(), Fail::none())),
-                    Some((idx, sym)) => Err(Fail::one(idx, E::unexpected_sym(sym, stream.region_from(checkpoint)).expected(self.0.clone().into()))),
+                    Some((idx, sym)) => Err(Fail::one(idx, E::unexpected_sym(sym, stream.span_from(checkpoint)).expected(self.0.clone().into()))),
                     None => Err(Fail::one(!0, E::unexpected_end())),
                 }
             })
@@ -142,7 +142,7 @@ pub fn seq<I, J, E>(item: impl IntoIterator<Item=J>) -> Parser<impl Pattern<E, I
                 for item in self.0.iter() {
                     match stream.next() {
                         Some((_, sym)) if sym == item => syms.push(sym.clone()),
-                        Some((idx, sym)) => return Err(Fail::one(idx, E::unexpected_sym(sym, stream.region_from(checkpoint)).expected(item.clone().into()))),
+                        Some((idx, sym)) => return Err(Fail::one(idx, E::unexpected_sym(sym, stream.span_from(checkpoint)).expected(item.clone().into()))),
                         None => return Err(Fail::one(!0, E::unexpected_end())),
                     }
                 }
@@ -191,7 +191,7 @@ pub fn nested_parse<P, I, Ins, J, E>(f: impl Fn(I) -> Option<(Parser<P, E>, Ins)
                             Ok((out, _)) => Ok((out, Fail::none())),
                             Err(err) => Err(err.add_index(idx)), // This is a total hack
                         },
-                        None => Err(Fail::one(idx, E::unexpected_sym(sym, stream.region_from(checkpoint)))),
+                        None => Err(Fail::one(idx, E::unexpected_sym(sym, stream.span_from(checkpoint)))),
                     },
                     None => Err(Fail::one(!0, E::unexpected_end())),
                 }
@@ -230,7 +230,7 @@ pub fn permit_map<I, J, E>(f: impl Fn(I) -> Option<J> + Clone) -> Parser<impl Pa
                 match stream.next() {
                     Some((idx, sym)) => match self.0(sym.clone()) {
                         Some(out) => Ok((out, Fail::none())),
-                        None => Err(Fail::one(idx, E::unexpected_sym(sym, stream.region_from(checkpoint)))),
+                        None => Err(Fail::one(idx, E::unexpected_sym(sym, stream.span_from(checkpoint)))),
                     },
                     None => Err(Fail::one(!0, E::unexpected_end())),
                 }
