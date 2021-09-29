@@ -1,4 +1,4 @@
-#![feature(trait_alias, try_trait)]
+#![feature(trait_alias)]
 
 pub mod error;
 pub mod stream;
